@@ -89,7 +89,7 @@ chmod +x /root/send_wechat_message.sh
 crontab -e
 
 #加入以下行,意思为每半小时执行一次脚本监控端口状态，根据自己的要求修改
-*/30 * * * * /root/send_wechat_message.sh >/dev/null
+*/30 * * * * sh /root/send_wechat_message.sh >/root/send_wechat_message.log 2>&1
 
 #crontab用法参考https://tool.lu/crontab/
    ```

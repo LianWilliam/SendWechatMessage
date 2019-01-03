@@ -7,6 +7,7 @@
 ######################################################
 # VERSION		DATE		DESCRIPTION
 # 0.1		2019-01-03		initial
+# 0.2		2019-01-03		Fix the problem that the lsof command cannot be recognized in the scheduled task.
 ######################################################
 
 #------------------------以下变量需要自行修改-----------------------------------
@@ -53,7 +54,7 @@ function helpinfo
 	echo "
 	Usage:./${script_name} \"Send Message\"
 						  
-		Version: 0.1"
+		Version: 0.2"
 }
 
 if [ $# -eq 1 ];then
@@ -90,20 +91,21 @@ function SendMessage()
 		#发送的JSON内容
 		JSON="{\"touser\": \"$I\",\"msgtype\": \"text\",\"agentid\": \"$agentld\",\"text\": {\"content\": \"$msg\"},\"safe\":0 }"
 		#以POST的方式请求
-		log_echo "INFO" "发送消息内容：检查${port_name}服务 ${test_port}端口异常，请及时处理"
-		echo "发送消息内容：检查${port_name}服务 ${test_port}端口异常，请及时处理" > /tmp/request.txt
-		echo "请求命令：" >> /tmp/request.txt
-		echo "curl -sd $JSON $URL" >> /tmp/request.txt
-		echo "返回Response：" >> /tmp/request.txt
-		curl -sd "$JSON" "$URL" >> /tmp/request.txt
-		echo -e "\n" >> /tmp/request.txt
+		log_echo "INFO" "发送消息内容：检查${port_name}服务 ${test_port}端口异常，请及时处理" 
+		log_echo "INFO" "发送消息内容：检查${port_name}服务 ${test_port}端口异常，请及时处理" >>/var/log/send_wechat_message.log
+		echo "请求命令：" >> /tmp/request.log
+		echo "curl -sd $JSON $URL" >> /tmp/request.log
+		echo "返回Response：" >> /tmp/request.log
+		curl -sd "$JSON" "$URL" >> /tmp/request.log
+		echo -e "\n" >> /tmp/request.log
 		
-		cat /tmp/request.txt |grep -iw ok >/dev/null
+		cat /tmp/request.log |grep -iw ok >/dev/null
 		if [ $? -eq 0 ];then
 			log_echo "INFO" "消息发送成功"
+			log_echo "INFO" "消息发送成功" >>/var/log/send_wechat_message.log
 		else
-			log_echo "ERROR" "消息发送失败，`cat /tmp/request.txt`"
-			log_echo "ERROR" "消息发送失败 `cat /tmp/request.txt`" >>/var/log/send_wechat_message.log
+			log_echo "ERROR" "消息发送失败，`cat /tmp/request.log`"
+			log_echo "ERROR" "消息发送失败 `cat /tmp/request.log`" >>/var/log/send_wechat_message.log
 		fi
 		
 		#echo -e "\n"
@@ -113,6 +115,9 @@ function SendMessage()
 function MonitorPort()
 {	
 
+	#清空上一次执行时的请求日志,每次记录最后一批执行日志
+	> /tmp/request.log
+	
 	for i in $port;
 	do
 		#截取端口
@@ -120,7 +125,7 @@ function MonitorPort()
 		#截取应用或描述
 		port_name=`echo $i |awk -F : '{print $1}'`
 		#通过lsof命令查看端口是否启用
-		lsof -i:$test_port >/dev/null
+		/usr/sbin/lsof -i:$test_port >/dev/null
 		if [ $? -eq 0 ];then
 			log_echo "INFO" "检查${port_name}服务 \"${test_port}\" 端口正常"
 		else
@@ -145,7 +150,3 @@ function main
 }
 
 main "$@"
-
-
-
-
